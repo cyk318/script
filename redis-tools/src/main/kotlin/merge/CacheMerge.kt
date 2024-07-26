@@ -4,6 +4,9 @@ import redis.clients.jedis.Jedis
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.params.ScanParams
 
+// 总共合并个数
+private var mergeTotal = 0
+
 enum class RedisDataType {
     STRING,
     HASH,
@@ -25,6 +28,10 @@ data class RedisData (
     var expire: Long? = null,
 )
 
+object ScanConst {
+    const val SCAN_COUNT = 10000
+}
+
 object CacheMerge {
 
     fun read(jedis: Jedis): List<RedisData> {
@@ -38,11 +45,12 @@ object CacheMerge {
             val startTime = System.currentTimeMillis()
             jedis.use { redis ->
                 //1.scan 获取 key
-                val scanResult = redis.scan(cursor, ScanParams().count(10000))
+                val scanResult = redis.scan(cursor, ScanParams().count(ScanConst.SCAN_COUNT))
                 cursor = scanResult.cursor
                 val keys = scanResult.result
                 val dataList = Array(keys.size) { RedisData() }
                 total += keys.size
+                mergeTotal += keys.size
 
                 //2.根据 key 的类型，获取所需要的值，组合成 RedisData
                 // 1) 获取 type (注意大小写)
@@ -119,6 +127,7 @@ object CacheMerge {
         redis.pipelined().use { pipeline ->
             val operator = PipelineWriteOperator()
             for (i in redisDataList.indices) {
+
                 val data = redisDataList[i]
 
                 // 写入管道
@@ -141,7 +150,7 @@ object CacheMerge {
                 }
 
                 // 模拟 AOF 批量刷新缓冲区
-                if (i != 0 && i % 10000 == 0) {
+                if (i != 0 && i % ScanConst.SCAN_COUNT == 0) {
                     val startTime = System.currentTimeMillis()
                     pipeline.syncAndReturnAll()
                     println("已写入 $i ...   耗时${System.currentTimeMillis() - startTime}" )
@@ -189,6 +198,9 @@ fun main() {
         // 2.写入 cyk实例
         CacheMerge.write(redisDataList, destJedis)
         println("---------------------- 处理完成: ${instance.second} ----------------------")
+        println("_________")
+        println("Note: 目前总共合并 $mergeTotal")
+        println("_________")
         println()
     }
 
