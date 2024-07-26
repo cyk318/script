@@ -28,8 +28,9 @@ data class RedisData (
     var expire: Long? = null,
 )
 
-object ScanConst {
+object MergeConst {
     const val SCAN_COUNT = 10000
+    const val WRITE_COUNT = 100000
 }
 
 object CacheMerge {
@@ -45,7 +46,7 @@ object CacheMerge {
             val startTime = System.currentTimeMillis()
             jedis.use { redis ->
                 //1.scan 获取 key
-                val scanResult = redis.scan(cursor, ScanParams().count(ScanConst.SCAN_COUNT))
+                val scanResult = redis.scan(cursor, ScanParams().count(MergeConst.SCAN_COUNT))
                 cursor = scanResult.cursor
                 val keys = scanResult.result
                 val dataList = Array(keys.size) { RedisData() }
@@ -112,9 +113,9 @@ object CacheMerge {
             }
             println("已读取 $total ...   耗时${System.currentTimeMillis() - startTime}" )
 
-            if (++num > 1) {
-                break
-            }
+//            if (++num > 5) {
+//                break
+//            }
 
         } while (cursor != "0")
         println("<< 读取完成 >>")
@@ -150,13 +151,15 @@ object CacheMerge {
                 }
 
                 // 模拟 AOF 批量刷新缓冲区
-                if (i != 0 && i % ScanConst.SCAN_COUNT == 0) {
+                if (i != 0 && i % MergeConst.WRITE_COUNT == 0) {
                     val startTime = System.currentTimeMillis()
                     pipeline.syncAndReturnAll()
                     println("已写入 $i ...   耗时${System.currentTimeMillis() - startTime}" )
                 }
             }
+            val startTime = System.currentTimeMillis()
             pipeline.sync() //把最后不到 10000 的数据刷新了
+            println("最后写入... 耗时${System.currentTimeMillis() - startTime}" )
         }
         println("<< 写入完成 >>")
 
