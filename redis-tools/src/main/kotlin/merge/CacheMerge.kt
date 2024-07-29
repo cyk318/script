@@ -33,8 +33,8 @@ data class RedisData (
 )
 
 object MergeConst {
-    const val SCAN_COUNT = 10000
-    const val WRITE_COUNT = 100000
+    const val SCAN_COUNT = 1_0000
+    const val WRITE_COUNT = 10_0000
 }
 
 object CacheMerge {
@@ -121,9 +121,9 @@ object CacheMerge {
             }
             println("已读取 $total ...   耗时${System.currentTimeMillis() - startTime}" )
 
-            if (++num > 3) {
-                break
-            }
+//            if (++num > 3) {
+//                break
+//            }
 
         } while (cursor != "0")
         println("<< 读取完成 >>")
