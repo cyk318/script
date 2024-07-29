@@ -114,81 +114,81 @@ class PipelineWriteOperator {
 
 }
 
-object PipelineWriteStrategy {
-
-    fun stringWriter(pipeline: Pipeline, data: RedisData) {
-        val key = data.key!!
-        val value = data.value?.let { it as String }
-        val expire = data.expire
-
-        value?.let {
-            pipeline.set(key, value)
-            expire?.let {
-                pipeline.expire(key, it)
-            }
-        }
-    }
-
-    fun hashWriter(pipeline: Pipeline, data: RedisData) {
-        val key = data.key!!
-        val value = data.value?.let { it as Map<String, String> }
-        val expire = data.expire
-
-        value?.let {
-            pipeline.hset(key, value)
-            expire?.let {
-                pipeline.expire(key, it)
-            }
-        }
-    }
-
-    fun listWriter(pipeline: Pipeline, data: RedisData) {
-        val key = data.key!!
-        val value = data.value?.let { (it as List<String>).toTypedArray() }
-        val expire = data.expire
-
-        value?.let {
-            pipeline.lpush(key, *value)
-            expire?.let {
-                pipeline.expire(key, it)
-            }
-        }
-    }
-
-    fun setWriter(pipeline: Pipeline, data: RedisData) {
-        val key = data.key!!
-        val value = data.value?.let { (it as Set<String>).toTypedArray() }
-        val expire = data.expire
-
-        value?.let {
-            pipeline.sadd(key, *value)
-            expire?.let {
-                pipeline.expire(key, it)
-            }
-        }
-    }
-
-    fun zSetWriter(pipeline: Pipeline, data: RedisData) {
-        val key = data.key!!
-        val values = data.value?.let {
-            mutableMapOf<String, Double>().apply {
-                val tuples = data.value as List<Tuple>
-                tuples.forEach { tuple ->
-                    this[tuple.element] = tuple.score
-                }
-            }
-        }
-        val expire = data.expire
-
-        values?.let {
-            pipeline.zadd(key, values)
-            expire?.let {
-                pipeline.expire(key, it)
-            }
-        }
-    }
-
-}
+//object PipelineWriteStrategy {
+//
+//    fun stringWriter(pipeline: Pipeline, data: RedisData) {
+//        val key = data.key!!
+//        val value = data.value?.let { it as String }
+//        val expire = data.expire
+//
+//        value?.let {
+//            pipeline.set(key, value)
+//            expire?.let {
+//                pipeline.expire(key, it)
+//            }
+//        }
+//    }
+//
+//    fun hashWriter(pipeline: Pipeline, data: RedisData) {
+//        val key = data.key!!
+//        val value = data.value?.let { it as Map<String, String> }
+//        val expire = data.expire
+//
+//        value?.let {
+//            pipeline.hset(key, value)
+//            expire?.let {
+//                pipeline.expire(key, it)
+//            }
+//        }
+//    }
+//
+//    fun listWriter(pipeline: Pipeline, data: RedisData) {
+//        val key = data.key!!
+//        val value = data.value?.let { (it as List<String>).toTypedArray() }
+//        val expire = data.expire
+//
+//        value?.let {
+//            pipeline.lpush(key, *value)
+//            expire?.let {
+//                pipeline.expire(key, it)
+//            }
+//        }
+//    }
+//
+//    fun setWriter(pipeline: Pipeline, data: RedisData) {
+//        val key = data.key!!
+//        val value = data.value?.let { (it as Set<String>).toTypedArray() }
+//        val expire = data.expire
+//
+//        value?.let {
+//            pipeline.sadd(key, *value)
+//            expire?.let {
+//                pipeline.expire(key, it)
+//            }
+//        }
+//    }
+//
+//    fun zSetWriter(pipeline: Pipeline, data: RedisData) {
+//        val key = data.key!!
+//        val values = data.value?.let {
+//            mutableMapOf<String, Double>().apply {
+//                val tuples = data.value as List<Tuple>
+//                tuples.forEach { tuple ->
+//                    this[tuple.element] = tuple.score
+//                }
+//            }
+//        }
+//        val expire = data.expire
+//
+//        values?.let {
+//            pipeline.zadd(key, values)
+//            expire?.let {
+//                pipeline.expire(key, it)
+//            }
+//        }
+//    }
+//
+//}
 
 
 

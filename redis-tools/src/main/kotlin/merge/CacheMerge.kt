@@ -6,6 +6,10 @@ import redis.clients.jedis.params.ScanParams
 
 // 总共合并个数
 private var mergeTotal = 0
+private var delTotal = 0
+
+private val set = mutableSetOf<String>()
+private var repeatTotal = 0
 
 enum class RedisDataType {
     STRING,
@@ -74,8 +78,12 @@ object CacheMerge {
                     val expires = pipeline.syncAndReturnAll()
                     for (i in 0 ..< keys.size) {
                         val expire = expires[i] as Long
-                        if (expire > 0) {
+                        if (expire > (60 * 60 * 24L)) { //大于 1 天时间才需要设置过期时间
                             dataList[i].expire = expire
+                        } else if (expire == -1L) { //永不过期的 key
+                            dataList[i].expire = null
+                        } else { //其他一律按过期 key 来算
+                            dataList[i].expire = -2L
                         }
                     }
                 }
@@ -91,7 +99,7 @@ object CacheMerge {
                                 RedisDataType.SET -> pipeline.smembers(key)
                                 RedisDataType.ZSET -> pipeline.zrangeWithScores(key, 0, -1)
                                 RedisDataType.NONE -> {
-                                    //刚好过期的 key，也需要获取一下，否则 dataList 数据对应关系错乱
+                                    //过期的 key，也需要获取一下，否则 dataList 数据对应关系错乱
 //                                    println("类型为 NONE: ${dataList[i]}")
                                     pipeline.get(key)
                                 }
@@ -113,9 +121,9 @@ object CacheMerge {
             }
             println("已读取 $total ...   耗时${System.currentTimeMillis() - startTime}" )
 
-//            if (++num > 5) {
-//                break
-//            }
+            if (++num > 3) {
+                break
+            }
 
         } while (cursor != "0")
         println("<< 读取完成 >>")
@@ -128,8 +136,21 @@ object CacheMerge {
         redis.pipelined().use { pipeline ->
             val operator = PipelineWriteOperator()
             for (i in redisDataList.indices) {
-
                 val data = redisDataList[i]
+
+                //过期 key 就不用写入了
+                if (data.expire == -2L) {
+                    delTotal += 1
+                    continue
+                }
+
+                //不通 redis 之间 key 重复，就不写了
+                if (set.contains(data.key!!)) {
+                    repeatTotal += 1
+                    continue
+                } else {
+                    set.add(data.key!!)
+                }
 
                 // 写入管道
                 try {
@@ -164,7 +185,6 @@ object CacheMerge {
         println("<< 写入完成 >>")
 
     }
-
 
 }
 
@@ -202,7 +222,7 @@ fun main() {
         CacheMerge.write(redisDataList, destJedis)
         println("---------------------- 处理完成: ${instance.second} ----------------------")
         println("_________")
-        println("Note: 目前总共合并 $mergeTotal")
+        println("Note: 目前总共合并 ${mergeTotal - delTotal - repeatTotal}")
         println("_________")
         println()
     }
